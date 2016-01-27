@@ -1,0 +1,208 @@
+
+<html ng-app='app'>
+<head>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" rel="stylesheet" integrity="sha256-7s5uDGW3AHqw6xtJmNNtr+OBRJUlgkNJEo78P4b0yRw= sha512-nNo+yCHEyn0smMxSswnf/OnX6/KwJuZTlNZBjauKhTK0c+zT+q5JOCx0UFhXQ6rJR9jg6Es8gPuD2uZcYDLqSw==" crossorigin="anonymous">
+
+
+
+
+    <script src="https://code.jquery.com/jquery-2.2.0.js"></script>
+    <script src="https://alexgibson.github.io/notify.js/js/notify.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha256-KXn5puMvxCw+dAYznun+drMdG1IFl3agK0p/pqT9KAo= sha512-2e8qq0ETcfWRI4HJBzQiA3UoyFk6tbNyG+qSaIBZLyW9Xf3sWZHN/lxe9fTh1U45DpPf07yj94KsUHHWe4Yk1A==" crossorigin="anonymous"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.23/angular.min.js"></script>
+
+</head>
+<body>
+    <button id="my-button">Notify Me!</button>
+
+    <div ng-controller="mainController">
+
+        {{tagsToNotify}}
+
+        <ul class="list-group">
+            <li class="list-group-item" data-ng-repeat="i in data.items">
+                <a href="{{i.link}}" target="_blank">{{i.title}}</a>
+                <div class="pull-right">
+                    <span class='btn btn-xs' data-ng-repeat="c in i.categories" data-ng-click="flipTag(c);" data-ng-class="{'btn-info': tagsToNotify.indexOf(c) != -1, 'btn-default': tagsToNotify.indexOf(c) == -1 }">{{c}}</span>
+                </div>
+            </li>
+
+        </ul>
+    </div>
+
+
+    <script>
+
+        document.addEventListener('DOMContentLoaded', function () {
+            if (Notification.permission !== "granted")
+                Notification.requestPermission();
+        });
+
+        var app = angular.module('app', [])
+
+
+        .config(['$httpProvider', function ($httpProvider) {
+
+            $httpProvider.defaults.useXDomain = true;
+            delete $httpProvider.defaults.headers.common['X-Requested-With'];
+            delete $httpProvider.defaults.headers.common["Origin"]
+
+        }])
+
+        .controller('mainController', function ($scope, $http, $interval, $location) {
+
+            $scope.tagsToNotify = [];
+            $scope.prevData = { items: [] };
+
+            $scope.fetchEntries = function () {
+
+                $http.get('http://rss2json.com/api.json?rss_url=http%3A%2F%2Fpt.stackoverflow.com%2Ffeeds%2F').then(
+                  function (data) {
+                      $scope.data = data.data;
+
+                      //Comparison
+
+                      var log = [];
+
+                      console.log('1');
+
+                      angular.forEach($scope.data.items, function (value, key) {
+
+
+                          var announced = false;
+
+                          angular.forEach(value.categories, function (cat) {
+                              if ($scope.tagsToNotify.indexOf(cat) != -1 && !announced) {
+
+                                  announced = true;
+
+                                  var myNotification = new Notify('[' + value.categories.join() + ']', {
+                                      body: value.title,
+                                      tag: value.guid,
+                                      notifyClick: onClickNotification,
+                                      timeout: 10
+                                  });
+
+                                  function onClickNotification() {
+
+                                      chrome.windows.getCurrent(function (currentWindow) {
+                                          if (currentWindow != null) {
+                                              return chrome.tabs.create({
+                                                  'url': value.link
+                                              });
+                                          } else {
+                                              return chrome.windows.create({
+                                                  'url': value.link,
+                                                  'focused': true
+                                              });
+                                          }
+                                      });
+                                  }
+
+                                  myNotification.show();
+                              }
+                          });
+
+
+                      }, log);
+
+                  },
+                  function (data) {
+                  });
+
+            }
+
+
+            $scope.loadData = function () {
+                if (localStorage.getItem("tagsToNotify"))
+                    $scope.tagsToNotify = localStorage.getItem("tagsToNotify").split(',');
+            };
+
+            $scope.saveData = function () {
+                localStorage.setItem("tagsToNotify", $scope.tagsToNotify);
+            };
+
+            $scope.flipTag = function (tag) {
+
+                if ($scope.tagsToNotify.indexOf(tag) == -1) {
+                    $scope.tagsToNotify.unshift(tag);
+                }
+                else {
+                    var index = $scope.tagsToNotify.indexOf(tag);
+                    if (index !== -1) {
+                        $scope.tagsToNotify.splice(index, 1);
+                    }
+                }
+
+                $scope.saveData();
+            };
+
+            $scope.loadData();
+            $scope.fetchEntries();
+
+            var stopTime = $interval($scope.fetchEntries, 60000);
+
+        });
+
+        if (!Notify.needsPermission) {
+            doNotification();
+        } else if (Notify.isSupported()) {
+            Notify.requestPermission(onPermissionGranted, onPermissionDenied);
+        }
+
+        function onPermissionGranted() {
+            console.log('Permission has been granted by the user');
+            doNotification();
+        }
+
+        function onPermissionDenied() {
+            console.warn('Permission has been denied by the user');
+        }
+
+        document.getElementById('my-button').addEventListener('click', function () {
+
+            function onShowNotification() {
+                console.log('notification is shown!');
+            }
+
+            function onCloseNotification() {
+                console.log('notification is closed!');
+            }
+
+            function onClickNotification() {
+                console.log('notification was clicked!');
+            }
+
+            function onErrorNotification() {
+                console.error('Error showing notification. You may need to request permission.');
+            }
+
+
+            function doNotification() {
+                var myNotification = new Notify('Yo dawg!', {
+                    body: 'This is an awesome notification',
+                    tag: 'My unique id',
+                    notifyShow: onShowNotification,
+                    notifyClose: onCloseNotification,
+                    notifyClick: onClickNotification,
+                    notifyError: onErrorNotification,
+                    timeout: 4
+                });
+
+                myNotification.show();
+            }
+
+            if (!Notify.needsPermission) {
+                doNotification();
+            } else if (Notify.isSupported()) {
+                Notify.requestPermission(onPermissionGranted, onPermissionDenied);
+            }
+
+        }, false);
+
+    </script>
+</body>
+
+
+
+</html>
