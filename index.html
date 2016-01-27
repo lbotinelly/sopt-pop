@@ -21,7 +21,7 @@
             <li class="list-group-item" data-ng-repeat="i in data.items">
                 {{i.title}}
 
-                <span class="badge" data-ng-repeat="c in i.categories">{{c}}</span>
+                <span class="badge" data-ng-repeat="c in i.categories" data-ng-click="flipTag(c);">{{c}}</span>
 
             </li>
 
@@ -34,82 +34,108 @@
 
     <script>
 
-    document.addEventListener('DOMContentLoaded', function () {
-        if (Notification.permission !== "granted")
-            Notification.requestPermission();
-    });
+        document.addEventListener('DOMContentLoaded', function () {
+            if (Notification.permission !== "granted")
+                Notification.requestPermission();
+        });
 
 
-    var app = angular.module('app', [])
+        var app = angular.module('app', [])
 
 
-    .config(['$httpProvider', function ($httpProvider) {
+        .config(['$httpProvider', function ($httpProvider) {
 
-        $httpProvider.defaults.useXDomain = true;
-        delete $httpProvider.defaults.headers.common['X-Requested-With'];
-        delete $httpProvider.defaults.headers.common["Origin"]
+            $httpProvider.defaults.useXDomain = true;
+            delete $httpProvider.defaults.headers.common['X-Requested-With'];
+            delete $httpProvider.defaults.headers.common["Origin"]
 
-    }])
+        }])
 
-    .controller('mainController', function ($scope, $http) {
+        .controller('mainController', function ($scope, $http) {
 
-        $http.get('http://rss2json.com/api.json?rss_url=http%3A%2F%2Fpt.stackoverflow.com%2Ffeeds%2F').then(
-          function (data) {
-              $scope.data = data.data;
-          },
-          function (data) {
+            $http.get('http://rss2json.com/api.json?rss_url=http%3A%2F%2Fpt.stackoverflow.com%2Ffeeds%2F').then(
+              function (data) {
+                  $scope.data = data.data;
+              },
+              function (data) {
 
-          });
-    });
+              });
 
-    document.getElementById('my-button').addEventListener('click', function () {
 
-        function onShowNotification() {
-            console.log('notification is shown!');
-        }
+            $scope.loadData = function () {
 
-        function onCloseNotification() {
-            console.log('notification is closed!');
-        }
+                $scope.tagsToNotify = localStorage.getItem("tagsToNotify") || [];
 
-        function onClickNotification() {
-            console.log('notification was clicked!');
-        }
+            };
 
-        function onErrorNotification() {
-            console.error('Error showing notification. You may need to request permission.');
-        }
+            $scope.saveData = function () {
+                localStorage.setItem("tagsToNotify", $scope.tagsToNotify);
+            };
 
-        function onPermissionGranted() {
-            console.log('Permission has been granted by the user');
-            doNotification();
-        }
+            $scope.flipTag = function (tag) {
 
-        function onPermissionDenied() {
-            console.warn('Permission has been denied by the user');
-        }
+                if ($scope.tagsToNotify.indexOf(tag) == -1) {
+                    $scope.tagsToNotify.unshift(tag);
+                }
+                else {
+                    var index = $scope.tagsToNotify.indexOf(tag);
+                    if (index !== -1) {
+                        $scope.tagsToNotify.splice(index, 1);
+                    }
+                }
+                $scope.saveData();
+            };
 
-        function doNotification() {
-            var myNotification = new Notify('Yo dawg!', {
-                body: 'This is an awesome notification',
-                tag: 'My unique id',
-                notifyShow: onShowNotification,
-                notifyClose: onCloseNotification,
-                notifyClick: onClickNotification,
-                notifyError: onErrorNotification,
-                timeout: 4
-            });
+        });
 
-            myNotification.show();
-        }
+        document.getElementById('my-button').addEventListener('click', function () {
 
-        if (!Notify.needsPermission) {
-            doNotification();
-        } else if (Notify.isSupported()) {
-            Notify.requestPermission(onPermissionGranted, onPermissionDenied);
-        }
+            function onShowNotification() {
+                console.log('notification is shown!');
+            }
 
-    }, false);
+            function onCloseNotification() {
+                console.log('notification is closed!');
+            }
+
+            function onClickNotification() {
+                console.log('notification was clicked!');
+            }
+
+            function onErrorNotification() {
+                console.error('Error showing notification. You may need to request permission.');
+            }
+
+            function onPermissionGranted() {
+                console.log('Permission has been granted by the user');
+                doNotification();
+            }
+
+            function onPermissionDenied() {
+                console.warn('Permission has been denied by the user');
+            }
+
+            function doNotification() {
+                var myNotification = new Notify('Yo dawg!', {
+                    body: 'This is an awesome notification',
+                    tag: 'My unique id',
+                    notifyShow: onShowNotification,
+                    notifyClose: onCloseNotification,
+                    notifyClick: onClickNotification,
+                    notifyError: onErrorNotification,
+                    timeout: 4
+                });
+
+                myNotification.show();
+            }
+
+            if (!Notify.needsPermission) {
+                doNotification();
+            } else if (Notify.isSupported()) {
+                Notify.requestPermission(onPermissionGranted, onPermissionDenied);
+            }
+
+        }, false);
 
     </script>
 </body>
