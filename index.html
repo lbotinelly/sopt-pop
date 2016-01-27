@@ -53,7 +53,7 @@
 
     .controller('mainController', function ($scope, $http) {
 
-        $http.get('https://rss2json.com/api.json?rss_url=http%3A%2F%2Fpt.stackoverflow.com%2Ffeeds%2F').then(
+        $http.get('http://rss2json.com/api.json?rss_url=http%3A%2F%2Fpt.stackoverflow.com%2Ffeeds%2F').then(
           function (data) {
               $scope.data = data.data;
           },
