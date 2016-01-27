@@ -38,7 +38,6 @@
                 Notification.requestPermission();
         });
 
-
         var app = angular.module('app', [])
 
 
@@ -52,6 +51,7 @@
 
         .controller('mainController', function ($scope, $http, $interval, $location) {
 
+            $scope.tagsToNotify = [];
             $scope.prevData = { items: [] };
 
             $scope.fetchEntries = function () {
@@ -76,27 +76,16 @@
 
                                   announced = true;
 
-                                  var myNotification = new Notify('[' + value.categories.join() + ']', {
+                                  var myNotification = new Notify('New ' + cat + ' question', {
                                       body: value.title,
                                       tag: value.guid,
+                                      icon: 'http://sstatic.net/stackexchange/img/logos/so/so-icon.png?v=c78bd457575a',
                                       notifyClick: onClickNotification,
                                       timeout: 10
                                   });
 
                                   function onClickNotification() {
-
-                                      chrome.windows.getCurrent(function (currentWindow) {
-                                          if (currentWindow != null) {
-                                              return chrome.tabs.create({
-                                                  'url': value.link
-                                              });
-                                          } else {
-                                              return chrome.windows.create({
-                                                  'url': value.link,
-                                                  'focused': true
-                                              });
-                                          }
-                                      });
+                                      window.open(value.link);
                                   }
 
                                   myNotification.show();
@@ -114,11 +103,8 @@
 
 
             $scope.loadData = function () {
-
                 if (localStorage.getItem("tagsToNotify"))
                     $scope.tagsToNotify = localStorage.getItem("tagsToNotify").split(',');
-                else
-                    $scope.tagsToNotify = [];
             };
 
             $scope.saveData = function () {
