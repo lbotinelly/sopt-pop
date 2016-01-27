@@ -17,18 +17,17 @@
 
     <div ng-controller="mainController">
 
+        {{tagsToNotify}}
+
         <ul class="list-group">
             <li class="list-group-item" data-ng-repeat="i in data.items">
-                {{i.title}}
-
-                <span class="badge" data-ng-repeat="c in i.categories" data-ng-click="flipTag(c);">{{c}}</span>
-
+                <a href="{{i.link}}" target="_blank">{{i.title}}</a>
+                <div class="pull-right">
+                    <span class='btn btn-xs' data-ng-repeat="c in i.categories" data-ng-click="flipTag(c);" data-ng-class="{'btn-info': tagsToNotify.indexOf(c) != -1, 'btn-default': tagsToNotify.indexOf(c) == -1 }">{{c}}</span>
+                </div>
             </li>
 
         </ul>
-
-        {{data.items}}
-
     </div>
 
 
@@ -51,21 +50,75 @@
 
         }])
 
-        .controller('mainController', function ($scope, $http) {
+        .controller('mainController', function ($scope, $http, $interval, $location) {
 
-            $http.get('http://rss2json.com/api.json?rss_url=http%3A%2F%2Fpt.stackoverflow.com%2Ffeeds%2F').then(
-              function (data) {
-                  $scope.data = data.data;
-              },
-              function (data) {
+            $scope.prevData = { items: [] };
 
-              });
+            $scope.fetchEntries = function () {
+
+                $http.get('http://rss2json.com/api.json?rss_url=http%3A%2F%2Fpt.stackoverflow.com%2Ffeeds%2F').then(
+                  function (data) {
+                      $scope.data = data.data;
+
+                      //Comparison
+
+                      var log = [];
+
+                      console.log('1');
+
+                      angular.forEach($scope.data.items, function (value, key) {
+
+
+                          var announced = false;
+
+                          angular.forEach(value.categories, function (cat) {
+                              if ($scope.tagsToNotify.indexOf(cat) != -1 && !announced) {
+
+                                  announced = true;
+
+                                  var myNotification = new Notify('[' + value.categories.join() + ']', {
+                                      body: value.title,
+                                      tag: value.guid,
+                                      notifyClick: onClickNotification,
+                                      timeout: 10
+                                  });
+
+                                  function onClickNotification() {
+
+                                      chrome.windows.getCurrent(function (currentWindow) {
+                                          if (currentWindow != null) {
+                                              return chrome.tabs.create({
+                                                  'url': value.link
+                                              });
+                                          } else {
+                                              return chrome.windows.create({
+                                                  'url': value.link,
+                                                  'focused': true
+                                              });
+                                          }
+                                      });
+                                  }
+
+                                  myNotification.show();
+                              }
+                          });
+
+
+                      }, log);
+
+                  },
+                  function (data) {
+                  });
+
+            }
 
 
             $scope.loadData = function () {
 
-                $scope.tagsToNotify = localStorage.getItem("tagsToNotify") || [];
-
+                if (localStorage.getItem("tagsToNotify"))
+                    $scope.tagsToNotify = localStorage.getItem("tagsToNotify").split(',');
+                else
+                    $scope.tagsToNotify = [];
             };
 
             $scope.saveData = function () {
@@ -83,12 +136,31 @@
                         $scope.tagsToNotify.splice(index, 1);
                     }
                 }
+
                 $scope.saveData();
             };
 
             $scope.loadData();
+            $scope.fetchEntries();
+
+            var stopTime = $interval($scope.fetchEntries, 60000);
 
         });
+
+        if (!Notify.needsPermission) {
+            doNotification();
+        } else if (Notify.isSupported()) {
+            Notify.requestPermission(onPermissionGranted, onPermissionDenied);
+        }
+
+        function onPermissionGranted() {
+            console.log('Permission has been granted by the user');
+            doNotification();
+        }
+
+        function onPermissionDenied() {
+            console.warn('Permission has been denied by the user');
+        }
 
         document.getElementById('my-button').addEventListener('click', function () {
 
@@ -108,14 +180,6 @@
                 console.error('Error showing notification. You may need to request permission.');
             }
 
-            function onPermissionGranted() {
-                console.log('Permission has been granted by the user');
-                doNotification();
-            }
-
-            function onPermissionDenied() {
-                console.warn('Permission has been denied by the user');
-            }
 
             function doNotification() {
                 var myNotification = new Notify('Yo dawg!', {
