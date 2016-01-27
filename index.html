@@ -52,7 +52,7 @@
         .controller('mainController', function ($scope, $http, $interval, $location) {
 
             $scope.tagsToNotify = [];
-            $scope.prevData = { items: [] };
+            $scope.alreadyDisplayed = [];
 
             $scope.fetchEntries = function () {
 
@@ -68,28 +68,36 @@
 
                       angular.forEach($scope.data.items, function (value, key) {
 
-
                           var announced = false;
 
+                          console.log(value.title);
+
                           angular.forEach(value.categories, function (cat) {
-                              if ($scope.tagsToNotify.indexOf(cat) != -1 && !announced) {
 
-                                  announced = true;
+                              if (!announced)
+                                  if (($scope.tagsToNotify.indexOf(cat) > -1)) {
 
-                                  var myNotification = new Notify('New ' + cat + ' question', {
-                                      body: value.title,
-                                      tag: value.guid,
-                                      icon: 'http://sstatic.net/stackexchange/img/logos/so/so-icon.png?v=c78bd457575a',
-                                      notifyClick: onClickNotification,
-                                      timeout: 10
-                                  });
+                                      if ($scope.alreadyDisplayed.indexOf(value.guid) == -1) {
 
-                                  function onClickNotification() {
-                                      window.open(value.link);
+                                          console.log('    Showing!');
+
+                                          announced = true;
+                                          $scope.alreadyDisplayed.push(value.guid);
+
+                                          var myNotification = new Notify('New ' + cat + ' question', {
+                                              body: value.title,
+                                              icon: 'http://sstatic.net/stackexchange/img/logos/so/so-icon.png?v=c78bd457575a',
+                                              notifyClick: onClickNotification,
+                                              timeout: 10
+                                          });
+
+                                          function onClickNotification() {
+                                              window.open(value.link);
+                                          }
+
+                                          myNotification.show();
+                                      }
                                   }
-
-                                  myNotification.show();
-                              }
                           });
 
 
