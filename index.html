@@ -6,12 +6,15 @@
 
 
 
-    <script src="https://code.jquery.com/jquery-2.2.0.js" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-2.2.0.js"></script>
+    <script src="https://alexgibson.github.io/notify.js/js/notify.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha256-KXn5puMvxCw+dAYznun+drMdG1IFl3agK0p/pqT9KAo= sha512-2e8qq0ETcfWRI4HJBzQiA3UoyFk6tbNyG+qSaIBZLyW9Xf3sWZHN/lxe9fTh1U45DpPf07yj94KsUHHWe4Yk1A==" crossorigin="anonymous"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.23/angular.min.js"></script>
 
 </head>
 <body>
+    <button id="my-button">Notify Me!</button>
+
     <div ng-controller="mainController">
 
         <ul class="list-group">
@@ -29,32 +32,88 @@
     </div>
 
 
-</body>
+    <script>
 
-<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (Notification.permission !== "granted")
+            Notification.requestPermission();
+    });
+
 
     var app = angular.module('app', [])
 
 
-.config(['$httpProvider', function ($httpProvider) {
+    .config(['$httpProvider', function ($httpProvider) {
 
-    $httpProvider.defaults.useXDomain = true;
-    delete $httpProvider.defaults.headers.common['X-Requested-With'];
-    delete $httpProvider.defaults.headers.common["Origin"]
+        $httpProvider.defaults.useXDomain = true;
+        delete $httpProvider.defaults.headers.common['X-Requested-With'];
+        delete $httpProvider.defaults.headers.common["Origin"]
 
-}])
+    }])
 
-.controller('mainController', function ($scope, $http) {
+    .controller('mainController', function ($scope, $http) {
 
-    $http.get('http://rss2json.com/api.json?rss_url=http%3A%2F%2Fpt.stackoverflow.com%2Ffeeds%2F').then(
-      function (data) {
-          $scope.data = data.data;
-      },
-      function (data) {
+        $http.get('http://rss2json.com/api.json?rss_url=http%3A%2F%2Fpt.stackoverflow.com%2Ffeeds%2F').then(
+          function (data) {
+              $scope.data = data.data;
+          },
+          function (data) {
 
-      });
-});
+          });
+    });
 
-</script>
+    document.getElementById('my-button').addEventListener('click', function () {
+
+        function onShowNotification() {
+            console.log('notification is shown!');
+        }
+
+        function onCloseNotification() {
+            console.log('notification is closed!');
+        }
+
+        function onClickNotification() {
+            console.log('notification was clicked!');
+        }
+
+        function onErrorNotification() {
+            console.error('Error showing notification. You may need to request permission.');
+        }
+
+        function onPermissionGranted() {
+            console.log('Permission has been granted by the user');
+            doNotification();
+        }
+
+        function onPermissionDenied() {
+            console.warn('Permission has been denied by the user');
+        }
+
+        function doNotification() {
+            var myNotification = new Notify('Yo dawg!', {
+                body: 'This is an awesome notification',
+                tag: 'My unique id',
+                notifyShow: onShowNotification,
+                notifyClose: onCloseNotification,
+                notifyClick: onClickNotification,
+                notifyError: onErrorNotification,
+                timeout: 4
+            });
+
+            myNotification.show();
+        }
+
+        if (!Notify.needsPermission) {
+            doNotification();
+        } else if (Notify.isSupported()) {
+            Notify.requestPermission(onPermissionGranted, onPermissionDenied);
+        }
+
+    }, false);
+
+    </script>
+</body>
+
+
 
 </html>
